@@ -38,6 +38,7 @@ function initCursorFunction(
   addEventListener('beforeunload', () => {
     others.delete(me.id);
   });
+
   setInterval(() => {
     if (sendUpdate) {
       others.set(me.id, me);
@@ -58,6 +59,29 @@ function initCursorFunction(
     }
   };
 
+  document.addEventListener('keydown', (event) => {
+    if (event.key === '/' && chatInputDiv.value === '') {
+      event.preventDefault();
+      if (chatInputDiv.style.getPropertyValue('display') === 'block') {
+        chatInputDiv.style.setProperty('display', 'none');
+      } else {
+        chatInputDiv.style.setProperty('display', 'block');
+        chatInputDiv.focus();
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      chatInputDiv.value = '';
+      chatInputDiv.style.setProperty('display', 'none');
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+    }
+  });
+
+  document.addEventListener('keyup', () => {
+    me.chat = chatInputDiv.value;
+    sendUpdate = true;
+  });
+
   const cursor_interp = new Map();
   others.observe((evt) => {
     const updated_cursors = evt.changes.keys;
@@ -67,7 +91,7 @@ function initCursorFunction(
         switch (change.action) {
           case 'add':
             const new_cursor = others.get(cursor_id);
-            const new_cursor_div = cursorFactory(new_cursor);
+            const new_cursor_div = newCursor(new_cursor);
             new_cursor_div.classList.add('new');
             chatLayerDiv.appendChild(new_cursor_div);
             const add_point_closure = ([x, y]) =>
@@ -100,6 +124,16 @@ function initCursorFunction(
               .get(cursor_id)
               .addPoint([updated_cursor.x, updated_cursor.y]);
             break;
+          case 'delete':
+            const old_cursor_div = document.getElementById(
+              `cursor_${cursor_id}`
+            );
+            old_cursor_div.classList.add('expiring');
+            setTimeout(() => {
+              old_cursor_div.remove();
+              cursor_interp.delete(cursor_id);
+            }, 1000);
+            break;
         }
       }
     });
@@ -108,6 +142,7 @@ function initCursorFunction(
 }
 function newCursor(cursor) {
   console.log(cursor);
+  let randomColor = randomcolor();
   const cursorHtml = `<div id="cursor_${cursor.id}" class="cursor">
  <svg
    xmlns="http://www.w3.org/2000/svg"
@@ -123,14 +158,14 @@ function newCursor(cursor) {
      <path d="m12 24.4219v-16.015l11.591 11.619h-6.781l-.411.124z" />
      <path d="m21.0845 25.0962-3.605 1.535-4.682-11.089 3.686-1.553z" />
    </g>
-   <g fill="${randomcolor()}">
+   <g fill="${randomColor}">
      <path d="m19.751 24.4155-1.844.774-3.1-7.374 1.841-.775z" />
      <path d="m13 10.814v11.188l2.969-2.866.428-.139h4.768z" />
    </g>
  </svg>
  <p id="chat_${
    cursor.id
- }" class="chat" style="background-color: ${randomcolor()}">${
+ }" class="chat" style="background-color: ${randomColor}">${
     (cursor && cursor.chat) || ''
   }</p>
 </div>`;
@@ -141,4 +176,3 @@ function newCursor(cursor) {
   return cursorEl;
 }
 initCursorFunction();
-newCursor();
